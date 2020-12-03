@@ -101,8 +101,14 @@ class Planetside2(commands.Bot):
                 ctx.send(f"Player {player_name} not found.")
                 break
             player_faction = await player.faction()
+            player_outfit = await player.outfit()
             player_online = await player.is_online()
+            if player_online:
+                colour = discord.Colour.green()
+            else:
+                colour = discord.Colour.red()
             player_stats = f"""**Faction**: {player_faction}
+**Outfit**: {player_outfit}
 **Currently playing**: {player_online}
 **Battle rank**: {player.data.battle_rank.value}
 **A.S.P rank**: {player.data.prestige_level}
@@ -111,7 +117,7 @@ class Planetside2(commands.Bot):
 **Minutes played**: {player.data.times.minutes_played}
 **Certs earned**: {player.data.certs.earned_points}
             """
-            embed = discord.Embed(title=f"{player.data.name.first}'s Stats:", description=player_stats)
+            embed = discord.Embed(title=f"{player.data.name.first}'s Stats:", description=player_stats, colour=colour)
 
     @commands.command()
     async def outfitstats(self, ctx: commands.Context, outfit: str = "redmist"):
