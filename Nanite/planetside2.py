@@ -57,6 +57,27 @@ class Planetside2(commands.Bot):
         async with session.get(endpoint, raise_for_status=True) as resp:
             return await resp.json()
 
+    async def create_embed(
+        self,
+        title: str,
+        description: str,
+        colour: discord.Colour,
+        thumbnail_url: str = None,
+    ) -> discord.Embed:
+        """
+        Create a discord Embed object to send in in a discord message.
+
+        :param title: The title of the embed.
+        :param description: The description of the embed.
+        :param colour: The colour to set the embed.
+        :param thumbnail_url: The URL of the image to be used in the embed thumbnail.
+        :returns: A discord.Embed object.
+        """
+        logger.debug("Creating discord Embed object.")
+        return discord.Embed(
+            title=title, description=description, colour=colour
+        ).set_thumbnail(thumbnail_url)
+
     # Events and commands
 
     @commands.command()
@@ -72,7 +93,7 @@ class Planetside2(commands.Bot):
 
         :param server: The name of the server to retrieve population data for.
         """
-        # Obtain server ID
+        # Retrieve server ID
         server_id = await self.get_server_id(server)
         if server_id:
             async with aiohttp.ClientSession() as session:
@@ -82,13 +103,14 @@ class Planetside2(commands.Bot):
                         f"https://ps2.fisu.pw/api/population/?world={server_id}",
                     )
                     results = json["result"][0]
-                    embed = discord.Embed(
-                        title=f"Current population for {server.capitalize()}:",
-                        colour=discord.Colour.teal(),
-                        description=f"**Terran Republic**: {results['tr']}\n**New Conglomerate**: {results['nc']}\n**Vanu Sovereignty**: {results['vs']}\n**Nanite Systems Operative**: {results['ns']}",
+                    # Create embed
+                    embed = await self.create_embed(
+                        f"Current population for {server.capitalize()}:",
+                        f"**Terran Republic**: {results['tr']}\n**New Conglomerate**: {results['nc']}\n**Vanu Sovereignty**: {results['vs']}\n**Nanite Systems Operative**: {results['ns']}",
+                        discord.Colour.teal(),
                     )
                     await ctx.send(embed=embed)
-                except: # TODO: Find out what specific error occurs here
+                except:  # TODO: Find out what specific error occurs here
                     logger.debug(
                         f"An error occurred collecting population data for {server}."
                     )
@@ -108,23 +130,23 @@ class Planetside2(commands.Bot):
         """
         async with auraxium.Client() as client:
             try:
-                # Obtain general player info
+                # Retrieve general player info
                 player = await client.get_by_name(auraxium.ps2.Character, player_name)
             except ValueError as err:
                 logger.debug(
-                    f"An error occurred looking up player {player_name}: {err}. Most likely they don't exist."
+                    f"An error occurred looking up player {player_name}: {err}.\nMost likely they don't exist."
                 )
                 ctx.send(f"Player {player_name} not found.")
                 return
-            # Obtain player faction info
+            # Retrieve player faction info
             player_faction = await player.faction()
             # Build faction image URL
             faction_image_url = (
                 f"https://census.daybreakgames.com{player_faction.data.image_path}"
             )
-            # Obtain player outfit info
+            # Retrieve player outfit info
             player_outfit = await player.outfit()
-            # Obtain player online status info
+            # Retrieve player online status info
             player_online = await player.is_online()
             # Change colour of discord embed depending wheather the player is online or not
             if player_online:
@@ -132,7 +154,7 @@ class Planetside2(commands.Bot):
             else:
                 colour = discord.Colour.red()
             # Build embed message containing player info
-            player_stats = f"""**Faction**: {player_faction}
+            player_info = f"""**Faction**: {player_faction}
 **Outfit**: {player_outfit}
 **Currently playing**: {player_online}
 **Battle rank**: {player.data.battle_rank.value}
@@ -142,15 +164,43 @@ class Planetside2(commands.Bot):
 **Minutes played**: {player.data.times.minutes_played}
 **Certs earned**: {player.data.certs.earned_points}
             """
-            # Build embed and send
-            embed = discord.Embed(
-                title=f"{player.data.name.first}'s Stats:",
-                description=player_stats,
-                colour=colour,
-            ).set_thumbnail(url=faction_image_url)
+            # Create embed
+            embed = await self.create_embed(
+                f"{player.data.name.first}'s Information:",
+                player_info,
+                colour,
+                faction_image_url,
+            )
             await ctx.send(embed=embed)
 
     @commands.command()
-    async def outfitstats(self, ctx: commands.Context, outfit: str = "redmist"):
-        """"""
-        pass
+    async def outfitinfo(self, ctx: commands.Context, outfit_tag: str = "RMIS"):
+        """
+        Retrieve information about a Planetside 2 outfit.
+
+        :params outfit_tag: The tag of the Planetside 2 outfit.
+        """
+        async with auraxium.Client() as client:
+            try:
+                outfit = await auraxium.ps2.outfit.Outfit.get_by_tag(outfit_tag, client)
+            except ValueError as err:
+                logger.debug(
+                    f"An error occurred looking up the outfit tag {outfit_tag}: {err}. Most likely the outfit doesn't exist."
+                )
+                ctx.send(f"Outfit {outfit_tag} not found.")
+                return
+            # Retrieve outfit leader
+            outfit_leader = await client.get_by_id(
+                auraxium.ps2.Character, outfit.data.leader_character_id
+            )
+        # Create outfit info
+        outfit_info = f"""**Outfit name**: {outfit.data.name}
+**Creation date**: {outfit.data.time_created_date}
+**Member count**: {outfit.data.member_count}
+**Outfit leader**: {outfit_leader}
+        """
+        # Create embed
+        embed = await self.create_embed(
+            "Outfit Information:", outfit_info, discord.Colour.teal()
+        )
+        await ctx.send(embed=embed)
