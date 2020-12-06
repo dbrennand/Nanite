@@ -139,9 +139,9 @@ class Planetside2(commands.Bot):
                 player_outfit = await player.outfit()
                 # Retrieve player online status info
                 player_online = await player.is_online()
-                # Obtain character total deaths
+                # Obtain player total deaths
                 player_deaths = await player.stat(stat_name="weapon_deaths")
-                # Obtain character total kills
+                # Obtain player total kills
                 player_kills = await player.stat_by_faction(stat_name="weapon_kills")
             except ValueError as err:
                 logger.debug(
