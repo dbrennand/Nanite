@@ -112,11 +112,12 @@ class Planetside2(commands.Bot):
                     await ctx.send(embed=embed)
                 except:  # TODO: Find out what specific error occurs here
                     logger.debug(
-                        f"An error occurred collecting population data for {server}."
+                        f"An error occurred collecting population data for server '{server}'."
                     )
                     await ctx.send(
-                        f"An error occurred retrieveing population data for {server}."
+                        f"An error occurred retrieveing population data for server '{server}'."
                     )
+                    return
         else:
             logger.debug(f"Unknown server {server}.")
             await ctx.send(f"Unknown server {server}.")
@@ -132,29 +133,28 @@ class Planetside2(commands.Bot):
             try:
                 # Retrieve general player info
                 player = await client.get_by_name(auraxium.ps2.Character, player_name)
+                # Retrieve player faction info
+                player_faction = await player.faction()
+                # Retrieve player outfit info
+                player_outfit = await player.outfit()
+                # Retrieve player online status info
+                player_online = await player.is_online()
+                # Obtain character total deaths
+                player_deaths = await player.stat(stat_name="weapon_deaths")
+                # Obtain character total kills
+                player_kills = await player.stat_by_faction(stat_name="weapon_kills")
             except ValueError as err:
                 logger.debug(
-                    f"An error occurred looking up player {player_name}: {err}.\nMost likely they don't exist."
+                    f"An error occurred looking up player '{player_name}'.\n{err}"
                 )
-                ctx.send(f"Player {player_name} not found.")
+                ctx.send(f"An error occurred looking up player '{player_name}'.")
                 return
-            # Retrieve player faction info
-            player_faction = await player.faction()
-            # Build faction image URL
-            faction_image_url = (
-                f"https://census.daybreakgames.com{player_faction.data.image_path}"
-            )
-            # Retrieve player outfit info
-            player_outfit = await player.outfit()
-            # Retrieve player online status info
-            player_online = await player.is_online()
-            # Change colour of discord embed depending wheather the player is online or not
-            if player_online:
-                colour = discord.Colour.green()
-            else:
-                colour = discord.Colour.red()
-            # Build embed message containing player info
-            player_info = f"""**Faction**: {player_faction}
+        # Build faction image URL
+        faction_image_url = (
+            f"https://census.daybreakgames.com{player_faction.data.image_path}"
+        )
+        # Build embed message containing player info
+        player_info = f"""**Faction**: {player_faction}
 **Outfit**: {player_outfit}
 **Currently playing**: {player_online}
 **Battle rank**: {player.data.battle_rank.value}
@@ -163,15 +163,15 @@ class Planetside2(commands.Bot):
 **Last login**: {player.data.times.last_login_date}
 **Minutes played**: {player.data.times.minutes_played}
 **Certs earned**: {player.data.certs.earned_points}
-            """
-            # Create embed
-            embed = await self.create_embed(
-                f"{player.data.name.first}'s Information:",
-                player_info,
-                colour,
-                faction_image_url,
-            )
-            await ctx.send(embed=embed)
+        """
+        # Create embed
+        embed = await self.create_embed(
+            f"{player.data.name.first}'s Information:",
+            player_info,
+            discord.Colour().teal(),
+            faction_image_url,
+        )
+        await ctx.send(embed=embed)
 
     @commands.command()
     async def outfitinfo(self, ctx: commands.Context, outfit_tag: str = "RMIS"):
@@ -182,17 +182,18 @@ class Planetside2(commands.Bot):
         """
         async with auraxium.Client() as client:
             try:
+                # Retrieve outfit info
                 outfit = await auraxium.ps2.outfit.Outfit.get_by_tag(outfit_tag, client)
+                # Retrieve outfit leader
+                outfit_leader = await client.get_by_id(
+                    auraxium.ps2.Character, outfit.data.leader_character_id
+                )
             except ValueError as err:
                 logger.debug(
-                    f"An error occurred looking up the outfit tag {outfit_tag}: {err}. Most likely the outfit doesn't exist."
+                    f"An error occurred looking up the outfit information for outfit tag '{outfit_tag}': {err}."
                 )
-                ctx.send(f"Outfit {outfit_tag} not found.")
+                ctx.send(f"An error occurred looking up the outfit information for outfit tag '{outfit_tag}'.")
                 return
-            # Retrieve outfit leader
-            outfit_leader = await client.get_by_id(
-                auraxium.ps2.Character, outfit.data.leader_character_id
-            )
         # Create outfit info
         outfit_info = f"""**Outfit name**: {outfit.data.name}
 **Creation date**: {outfit.data.time_created_date}
