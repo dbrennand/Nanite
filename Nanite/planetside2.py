@@ -1,40 +1,46 @@
-# Settings imports
-from .config import BOT_DEFAULT_PLANETSIDE2_SERVER
+"""Planetside 2 bot cog.
+"""
+# Config imports
+from .config import DEFAULT_PS2_WORLD
 
-# Bot imports
+# Library imports
 import discord
+import typing
 import aiohttp
 import auraxium
-from discord.ext import commands
 from loguru import logger
 
 
-class Planetside2(commands.Bot):
+class Planetside2(discord.ext.commands.Bot):
     """
-    Class for the Planetside 2 Discord bot Cog.
+    Class for Nanite's Planetside 2 Cog.
 
     Groups Planetside 2 related bot commands.
     """
 
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: discord.ext.commands.Bot) -> None:
         """
-        Initalisation class for Planetside 2 class.
+        Initalisation function for Planetside 2 class.
         """
         self.bot = bot
+        self.COLOUR = discord.Colour().teal()
+        self.API_URL = "https://ps2.fisu.pw/api"
 
-    # Helpers functions
+    # Private functions
 
-    async def get_server_id(self, server_name: str) -> int:
+    async def _get_world_id(self, world_name: str) -> typing.Tuple[int, None]:
+        """Get the ID for a Planetside 2 world.
+
+        [API documentation](https://ps2.fisu.pw/api/population/)
+
+        Args:
+            world_name (str): The name of the Planetside 2 world to obtain the ID for.
+
+        Returns:
+            typing.Tuple[int, None]: An integer representing the ID of the Planetside 2 world (if found), otherwise, returns None.
         """
-        Retrieve the ID for a Planetside 2 server.
-
-        [API documentation](https://ps2.fisu.pw/api/territory/)
-
-        :param server_name: The name of the Planetside 2 server to obtain the ID for.
-        :returns: A int representing the ID of the Planetside 2 server if found, otherwise, returns None.
-        """
-        # Declare server dict
-        servers = {
+        # Declare world dict
+        worlds = {
             "connery": 1,
             "miller": 10,
             "cobalt": 13,
@@ -43,142 +49,188 @@ class Planetside2(commands.Bot):
             "apex": 24,
             "solTech": 40,
         }
-        return servers.get(server_name.lower(), None)
+        # Get the world ID from the world name
+        world_id = worlds.get(world_name.lower(), None)
+        logger.debug(f"World name: {world_name}, ID: {world_id}")
+        return world_id
 
-    async def get_json(self, session: aiohttp.ClientSession, endpoint: str) -> dict:
-        """
-        Retrieve JSON from a specified API endpoint.
+    async def _get_json(
+        self, session: aiohttp.ClientSession, sub_resource: str
+    ) -> dict:
+        """Get a JSON payload from an API endpoint.
 
-        :param endpoint: The URL for the API endpoint to retrieve JSON from.
-        :returns: A dictionary object containing the JSON response (if any).
-        :raises HTTPException: Occurs when a HTTP status code other than 200 occurs.
+        Args:
+            session (aiohttp.ClientSession): A reuseable aiohttp.ClientSession object to make HTTP requests.
+            sub_resource (str): The sub resource of the API to retrieve JSON data from.
+
+        Returns:
+            dict: A dictionary object containing the JSON response (if any).
         """
-        logger.debug(f"Endpoint: {endpoint}.")
+        endpoint = f"{self.API_URL}/{sub_resource}"
+        logger.debug(f"Getting JSON response from endpoint: {endpoint}")
         async with session.get(endpoint, raise_for_status=True) as resp:
             return await resp.json()
 
-    async def create_embed(
+    async def _create_embed(
         self,
         title: str,
         description: str,
         colour: discord.Colour,
         thumbnail_url: str = None,
     ) -> discord.Embed:
-        """
-        Create a discord Embed object to send in in a discord message.
+        """Creates a Discord Embed object to send in in a Discord message.
 
-        :param title: The title of the embed.
-        :param description: The description of the embed.
-        :param colour: The colour to set the embed.
-        :param thumbnail_url: The URL of the image to be used in the embed thumbnail.
-        :returns: A discord.Embed object.
+        Args:
+            title (str): The title of the discord.Embed object.
+            description (str): The description of the discord.Embed object.
+            colour (discord.Colour): A discord.Colour object to apply to the discord.Embed object.
+            thumbnail_url (str, optional): The URL to provide as the thumbnail for the discord.Embed object.
+
+        Returns:
+            discord.Embed: A discord.Embed object.
         """
-        logger.debug("Creating discord Embed object.")
         return discord.Embed(
             title=title, description=description, colour=colour
         ).set_thumbnail(thumbnail_url)
 
     # Events and commands
 
-    @commands.command()
+    @discord.ext.commands.command()
     async def population(
-        self, ctx: commands.Context, server: str = BOT_DEFAULT_PLANETSIDE2_SERVER
-    ):
-        """
-        Get current population data for a specific server.
-
-        Defaults to current time.
+        self,
+        ctx: discord.ext.commands.Context,
+        world: str = DEFAULT_PS2_WORLD,
+    ) -> None:
+        """Get current population data for a Planetside 2 world.
 
         [API documentation](https://ps2.fisu.pw/api/population/).
 
-        :param server: The name of the server to retrieve population data for.
+        Args:
+            ctx (discord.ext.commands.Context): Represents the context in which a command is being invoked under.
+            world (str, optional): The Planetside 2 world to get current population data for. Defaults to DEFAULT_PS2_WORLD.
         """
-        # Retrieve server ID
-        server_id = await self.get_server_id(server)
-        if server_id:
+        # Get world ID
+        world_id = await self._get_world_id(world_name=world)
+        if world_id:
             async with aiohttp.ClientSession() as session:
                 try:
-                    json = await self.get_json(
-                        session,
-                        f"https://ps2.fisu.pw/api/population/?world={server_id}",
+                    # Get JSON response
+                    json = await self._get_json(
+                        session=session, sub_resource=f"population/?world={world_id}"
                     )
-                    results = json["result"][0]
-                    # Create embed
-                    embed = await self.create_embed(
-                        f"Current population for {server.capitalize()}:",
-                        f"**Terran Republic**: {results['tr']}\n**New Conglomerate**: {results['nc']}\n**Vanu Sovereignty**: {results['vs']}\n**Nanite Systems Operative**: {results['ns']}",
-                        discord.Colour.teal(),
+                    # Get population data from JSON response
+                    population_data = json["result"][0]
+                    # Create Embed object
+                    embed = await self._create_embed(
+                        title=f"Current population data for: {world.capitalize()}",
+                        description=f"**TR**: {population_data['tr']}\n**NC**: {population_data['nc']}\n**VS**: {population_data['vs']}\n**NSO**: {population_data['ns']}",
+                        colour=self.COLOUR,
                     )
                     await ctx.send(embed=embed)
-                except:  # TODO: Find out what specific error occurs here
-                    logger.debug(
-                        f"An error occurred collecting population data for server '{server}'."
+                except:
+                    logger.error(
+                        f"Failed to get current population data for world: {world}, ID: {world_id}"
                     )
                     await ctx.send(
-                        f"An error occurred retrieveing population data for server '{server}'."
+                        f"Failed to get current population data for world: {world}, ID: {world_id}"
                     )
-                    return
         else:
-            logger.debug(f"Unknown server {server}.")
-            await ctx.send(f"Unknown server {server}.")
+            logger.warning(f"World: {world} unknown.")
+            await ctx.send(f"World: {world} unknown.")
 
-    @commands.command()
-    async def playerinfo(self, ctx: commands.Context, player_name: str):
+    @discord.ext.commands.command()
+    async def playerinfo(
+        self, ctx: discord.ext.commands.Context, player_name: str
+    ) -> None:
         """
-        Retrieve information for a Planetside 2 player.
+        Get information for a Planetside 2 player.
 
-        :param player_name: The name of the player to retrieve information for.
+        Args:
+            ctx (discord.ext.commands.Context): Represents the context in which a command is being invoked under.
+            player_name (str): The name of the Planetside 2 player to get information for.
         """
         async with auraxium.Client() as client:
             try:
-                # Retrieve general player info
+                # Retrieve Character object
                 player = await client.get_by_name(auraxium.ps2.Character, player_name)
-                # Retrieve player faction info
+                # Get player world information
+                player_world = await player.world()
+                # Retrieve player faction information
                 player_faction = await player.faction()
-                # Retrieve player outfit info
+                # Retrieve player outfit information
                 player_outfit = await player.outfit()
-                # Retrieve player online status info
-                player_online = await player.is_online()
-                # Obtain player total deaths
-                player_deaths = await player.stat(stat_name="weapon_deaths")
-                # Obtain player total kills
-                player_kills = await player.stat_by_faction(stat_name="weapon_kills")
-            except ValueError as err:
-                logger.debug(
-                    f"An error occurred looking up player '{player_name}'.\n{err}"
+                # Retrieve player online status information
+                player_online_status = await player.is_online()
+                # Obtain player's total deaths
+                # Profile ID 0 = global
+                player_weapon_deaths = await player.stat(
+                    stat_name="weapon_deaths", profile_id="0"
                 )
-                ctx.send(f"An error occurred looking up player '{player_name}'.")
+                player_total_deaths = player_weapon_deaths[0]["value_forever"]
+                # Obtain player's total kills
+                player_kills = await player.stat_by_faction(
+                    stat_name="weapon_kills", profile_id="0"
+                )
+                # Calculate total kill count
+                player_total_kills = (
+                    int(player_kills[0]["value_forever_vs"])
+                    + int(player_kills[0]["value_forever_nc"])
+                    + int(player_kills[0]["value_forever_tr"])
+                )
+                # Calculate KDR
+                player_kdr = round(player_total_kills / int(player_total_deaths), 2)
+            except:
+                logger.error(
+                    f"Failed to get player information for: {player_name}.\n{err}"
+                )
+                ctx.send(f"Failed to get player information for: {player_name}")
                 return
         # Build faction image URL
         faction_image_url = (
             f"https://census.daybreakgames.com{player_faction.data.image_path}"
         )
-        # Build embed message containing player info
-        player_info = f"""**Faction**: {player_faction}
+        # Build embed message containing player information
+        player_info = f"""**General Information**
+---------------------
+**World**: {player_world}
+**Faction**: {player_faction}
 **Outfit**: {player_outfit}
-**Currently playing**: {player_online}
-**Battle rank**: {player.data.battle_rank.value}
-**A.S.P rank**: {player.data.prestige_level}
+**Battle Rank**: {player.data.battle_rank.value}
+**Prestige**: {player.data.prestige_level}
+
+**Performance Information**
+-------------------------
+**Total Kills**: {player_total_kills}
+**Total Deaths**: {player_total_deaths}
+**KDR**: {player_kdr}
+
+**Misc Information**
+------------------
+**Currently Playing**: {player_online_status}
 **Created**: {player.data.times.creation_date}
-**Last login**: {player.data.times.last_login_date}
-**Minutes played**: {player.data.times.minutes_played}
-**Certs earned**: {player.data.certs.earned_points}
+**Last Login**: {player.data.times.last_login_date}
+**Minutes Played**: {player.data.times.minutes_played}
+**Total Certs Earned**: {player.data.certs.earned_points}
         """
         # Create embed
-        embed = await self.create_embed(
-            f"{player.data.name.first}'s Information:",
-            player_info,
-            discord.Colour().teal(),
-            faction_image_url,
+        embed = await self._create_embed(
+            title=f"{player.data.name.first}'s Information",
+            description=player_info,
+            colour=self.COLOUR,
+            thumbnail_url=faction_image_url,
         )
         await ctx.send(embed=embed)
 
-    @commands.command()
-    async def outfitinfo(self, ctx: commands.Context, outfit_tag: str = "RMIS"):
+    @discord.ext.commands.command()
+    async def outfitinfo(
+        self, ctx: discord.ext.commands.Context, outfit_tag: str
+    ) -> None:
         """
-        Retrieve information about a Planetside 2 outfit.
+        Get information for a Planetside 2 outfit.
 
-        :params outfit_tag: The tag of the Planetside 2 outfit.
+        Args:
+            ctx (discord.ext.commands.Context): Represents the context in which a command is being invoked under.
+            outfit_tag (str): The name of the Planetside 2 outfit to get information for.
         """
         async with auraxium.Client() as client:
             try:
@@ -188,20 +240,22 @@ class Planetside2(commands.Bot):
                 outfit_leader = await client.get_by_id(
                     auraxium.ps2.Character, outfit.data.leader_character_id
                 )
-            except ValueError as err:
-                logger.debug(
-                    f"An error occurred looking up the outfit information for outfit tag '{outfit_tag}': {err}."
+            except:
+                logger.error(
+                    f"Failed to get outfit information for outfit tag: {outfit_tag}.\n{err}"
                 )
-                ctx.send(f"An error occurred looking up the outfit information for outfit tag '{outfit_tag}'.")
+                ctx.send(
+                    f"Failed to get outfit information for outfit tag: {outfit_tag}."
+                )
                 return
         # Create outfit info
         outfit_info = f"""**Outfit name**: {outfit.data.name}
-**Creation date**: {outfit.data.time_created_date}
-**Member count**: {outfit.data.member_count}
-**Outfit leader**: {outfit_leader}
+**Creation Date**: {outfit.data.time_created_date}
+**Member Count**: {outfit.data.member_count}
+**Outfit Leader**: {outfit_leader}
         """
         # Create embed
-        embed = await self.create_embed(
-            "Outfit Information:", outfit_info, discord.Colour.teal()
+        embed = await self._create_embed(
+            title="Outfit Information:", description=outfit_info, colour=self.COLOUR
         )
         await ctx.send(embed=embed)
