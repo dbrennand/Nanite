@@ -129,7 +129,7 @@ class Planetside2(discord.ext.commands.Bot):
                     await ctx.send(embed=embed)
                 except Exception as err:
                     logger.error(
-                        f"Failed to get current population data for world: {world}, ID: {world_id}"
+                        f"Failed to get current population data for world: {world}, ID: {world_id}.\n{err}"
                     )
                     await ctx.send(
                         f"Failed to get current population data for world: {world}, ID: {world_id}"
