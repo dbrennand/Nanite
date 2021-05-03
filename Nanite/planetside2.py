@@ -127,7 +127,7 @@ class Planetside2(discord.ext.commands.Bot):
                         colour=self.COLOUR,
                     )
                     await ctx.send(embed=embed)
-                except:
+                except Exception as err:
                     logger.error(
                         f"Failed to get current population data for world: {world}, ID: {world_id}"
                     )
@@ -179,7 +179,7 @@ class Planetside2(discord.ext.commands.Bot):
                 )
                 # Calculate KDR
                 player_kdr = round(player_total_kills / int(player_total_deaths), 2)
-            except:
+            except Exception as err:
                 logger.error(
                     f"Failed to get player information for: {player_name}.\n{err}"
                 )
@@ -242,7 +242,7 @@ class Planetside2(discord.ext.commands.Bot):
                 outfit_leader = await client.get_by_id(
                     auraxium.ps2.Character, outfit.data.leader_character_id
                 )
-            except:
+            except Exception as err:
                 logger.error(
                     f"Failed to get outfit information for outfit tag: {outfit_tag}.\n{err}"
                 )
