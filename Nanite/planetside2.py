@@ -235,7 +235,7 @@ class Planetside2(discord.ext.commands.Bot):
         async with auraxium.Client() as client:
             try:
                 # Retrieve outfit info
-                outfit = await auraxium.ps2.Outfit.get_by_tag(outfit_tag, client)
+                outfit = await auraxium.ps2.Outfit.get_by_tag(outfit_tag.capitalize(), client)
                 # Retrieve outfit leader
                 outfit_leader = await client.get_by_id(
                     auraxium.ps2.Character, outfit.data.leader_character_id
@@ -256,6 +256,6 @@ class Planetside2(discord.ext.commands.Bot):
         """
         # Create embed
         embed = await self._create_embed(
-            title="Outfit Information:", description=outfit_info, colour=self.COLOUR
+            title=f"Outfit Information for {outfit_tag.capitalize()}:", description=outfit_info, colour=self.COLOUR
         )
         await ctx.send(embed=embed)
