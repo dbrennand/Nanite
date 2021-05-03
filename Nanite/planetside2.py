@@ -235,7 +235,7 @@ class Planetside2(discord.ext.commands.Bot):
         async with auraxium.Client() as client:
             try:
                 # Retrieve outfit info
-                outfit = await auraxium.ps2.outfit.Outfit.get_by_tag(outfit_tag, client)
+                outfit = await auraxium.ps2.Outfit.get_by_tag(outfit_tag, client)
                 # Retrieve outfit leader
                 outfit_leader = await client.get_by_id(
                     auraxium.ps2.Character, outfit.data.leader_character_id
