@@ -109,6 +109,7 @@ class Planetside2(discord.ext.commands.Bot):
             ctx (discord.ext.commands.Context): Represents the context in which a command is being invoked under.
             world (str, optional): The Planetside 2 world to get current population data for. Defaults to DEFAULT_PS2_WORLD.
         """
+        logger.info(f"Getting population data for world: {world}")
         # Get world ID
         world_id = await self._get_world_id(world_name=world)
         if world_id:
@@ -149,6 +150,7 @@ class Planetside2(discord.ext.commands.Bot):
             ctx (discord.ext.commands.Context): Represents the context in which a command is being invoked under.
             player_name (str): The name of the Planetside 2 player to get information for.
         """
+        logger.info(f"Getting information for player: {player_name}")
         async with auraxium.Client() as client:
             try:
                 # Retrieve Character object
@@ -232,6 +234,7 @@ class Planetside2(discord.ext.commands.Bot):
             ctx (discord.ext.commands.Context): Represents the context in which a command is being invoked under.
             outfit_tag (str): The name of the Planetside 2 outfit to get information for.
         """
+        logger.info(f"Getting information for outfit: {outfit_tag}")
         async with auraxium.Client() as client:
             try:
                 # Retrieve outfit info
