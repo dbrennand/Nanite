@@ -140,7 +140,7 @@ class Planetside2(discord.ext.commands.Bot):
             await ctx.send(f"World: {world} unknown.")
 
     @discord.ext.commands.command()
-    async def playerinfo(
+    async def pi(
         self, ctx: discord.ext.commands.Context, player_name: str
     ) -> None:
         """
@@ -231,7 +231,7 @@ class Planetside2(discord.ext.commands.Bot):
         await ctx.send(embed=embed)
 
     @discord.ext.commands.command()
-    async def outfitinfo(
+    async def oi(
         self, ctx: discord.ext.commands.Context, outfit_tag: str
     ) -> None:
         """
