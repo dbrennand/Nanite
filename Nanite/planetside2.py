@@ -153,23 +153,25 @@ class Planetside2(discord.ext.commands.Bot):
         logger.info(f"Getting information for player: {player_name}")
         async with auraxium.Client() as client:
             try:
-                # Retrieve Character object
+                # Get Character object
                 player = await client.get_by_name(auraxium.ps2.Character, player_name)
-                # Get player world information
+                # Calculate hours played
+                player_hours_played = round((int(player.data.times.minutes_played) / 60), 2)
+                # Get player's world information
                 player_world = await player.world()
-                # Retrieve player faction information
+                # Get player's faction information
                 player_faction = await player.faction()
-                # Retrieve player outfit information
+                # Get player's outfit information
                 player_outfit = await player.outfit()
-                # Retrieve player online status information
+                # Get player's online status information
                 player_online_status = await player.is_online()
-                # Obtain player's total deaths
+                # Get player's total deaths
                 # Profile ID 0 = global
                 player_weapon_deaths = await player.stat(
                     stat_name="weapon_deaths", profile_id="0"
                 )
                 player_total_deaths = player_weapon_deaths[0]["value_forever"]
-                # Obtain player's total kills
+                # Get player's total kills
                 player_kills = await player.stat_by_faction(
                     stat_name="weapon_kills", profile_id="0"
                 )
@@ -179,13 +181,25 @@ class Planetside2(discord.ext.commands.Bot):
                     + int(player_kills[0]["value_forever_nc"])
                     + int(player_kills[0]["value_forever_tr"])
                 )
+                # Calculate KPH
+                player_kph = round((player_total_kills / player_hours_played), 2)
                 # Calculate KDR
                 player_kdr = round(player_total_kills / int(player_total_deaths), 2)
-                # Obtain player's total score
+                # Get player's total score
                 player_score = await player.stat_history(stat_name="score")
                 player_total_score = player_score[0]["all_time"]
                 # Calculate SCM
                 player_scm = round(int(player_total_score) / int(player.times.minutes_played), 2)
+                # Get player's total headshots
+                player_hs = await player.stat_by_faction(stat_name="weapon_headshots", profile_id="0")
+                # Calculate total headshot count
+                player_hs_total = (
+                    int(player_hs[0]["value_forever_vs"])
+                    + int(player_hs[0]["value_forever_nc"])
+                    + int(player_hs[0]["value_forever_tr"])
+                )
+                # Calculate HSR
+                player_hsr = round((player_hs_total / player_total_kills) * 100, 2)
             except Exception as err:
                 logger.error(
                     f"Failed to get player information for: {player_name}.\n{err}"
@@ -218,7 +232,7 @@ class Planetside2(discord.ext.commands.Bot):
 **Currently Playing**: {player_online_status}
 **Created**: {player.data.times.creation_date}
 **Last Login**: {player.data.times.last_login_date}
-**Minutes Played**: {player.data.times.minutes_played}
+**Hours Played**: {player_hours_played}
 **Total Certs Earned**: {player.data.certs.earned_points}
         """
         # Create embed
