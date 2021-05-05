@@ -140,9 +140,7 @@ class Planetside2(discord.ext.commands.Bot):
             await ctx.send(f"World: {world} unknown.")
 
     @discord.ext.commands.command()
-    async def pi(
-        self, ctx: discord.ext.commands.Context, player_name: str
-    ) -> None:
+    async def pi(self, ctx: discord.ext.commands.Context, player_name: str) -> None:
         """
         Get information for a Planetside 2 player.
 
@@ -156,7 +154,9 @@ class Planetside2(discord.ext.commands.Bot):
                 # Get Character object
                 player = await client.get_by_name(auraxium.ps2.Character, player_name)
                 # Calculate hours played
-                player_hours_played = round((int(player.data.times.minutes_played) / 60), 2)
+                player_hours_played = round(
+                    (int(player.data.times.minutes_played) / 60), 2
+                )
                 # Get player's world information
                 player_world = await player.world()
                 # Get player's faction information
@@ -188,10 +188,14 @@ class Planetside2(discord.ext.commands.Bot):
                 # Get player's total score
                 player_score = await player.stat_history(stat_name="score")
                 player_total_score = player_score[0]["all_time"]
-                # Calculate SCM
-                player_scm = round(int(player_total_score) / int(player.times.minutes_played), 2)
+                # Calculate SPM
+                player_spm = round(
+                    int(player_total_score) / int(player.times.minutes_played), 2
+                )
                 # Get player's total headshots
-                player_hs = await player.stat_by_faction(stat_name="weapon_headshots", profile_id="0")
+                player_hs = await player.stat_by_faction(
+                    stat_name="weapon_headshots", profile_id="0"
+                )
                 # Calculate total headshot count
                 player_hs_total = (
                     int(player_hs[0]["value_forever_vs"])
@@ -211,29 +215,36 @@ class Planetside2(discord.ext.commands.Bot):
             f"https://census.daybreakgames.com{player_faction.data.image_path}"
         )
         # Build embed message containing player information
-        player_info = f"""**General Information**
----------------------
-**Server**: {player_world}
-**Faction**: {player_faction}
-**Outfit**: {player_outfit}
-**Battle Rank**: {player.data.battle_rank.value}
-**Prestige**: {player.data.prestige_level}
+        player_info = f"""
+**Server**
+{player_world}
 
-**Performance Information**
--------------------------
-**Total Kills**: {player_total_kills}
-**Total Deaths**: {player_total_deaths}
-**Total Score**: {player_total_score}
-**KDR**: {player_kdr}
-**SPM**: {player_scm}
+**Outfit**
+{player_outfit}
 
-**Misc Information**
-------------------
-**Currently Playing**: {player_online_status}
-**Created**: {player.data.times.creation_date}
-**Last Login**: {player.data.times.last_login_date}
-**Hours Played**: {player_hours_played}
-**Total Certs Earned**: {player.data.certs.earned_points}
+**Battle Rank (Prestige)**
+{player.data.battle_rank.value} ({player.data.prestige_level})
+
+**Total Kills**    **Total Deaths**    **Total Score**
+{player_total_kills}    {player_total_deaths}    {player_total_score}
+
+**KDR**    **SPM**    **HSR**    **KPH**
+{player_kdr}    {player_spm}    {player_hsr}%    {player_kph}
+
+**Currently Online**
+{player_online_status}
+
+**Last Login**
+{player.data.times.last_login_date}
+
+**Playtime Hours (Minutes)**
+{player_hours_played} ({player.data.times.minutes_played})
+
+**Total Certs Earned**
+{player.data.certs.earned_points}
+
+**Created**
+{player.data.times.creation_date}
         """
         # Create embed
         embed = await self._create_embed(
@@ -245,9 +256,7 @@ class Planetside2(discord.ext.commands.Bot):
         await ctx.send(embed=embed)
 
     @discord.ext.commands.command()
-    async def oi(
-        self, ctx: discord.ext.commands.Context, outfit_tag: str
-    ) -> None:
+    async def oi(self, ctx: discord.ext.commands.Context, outfit_tag: str) -> None:
         """
         Get information for a Planetside 2 outfit.
 
