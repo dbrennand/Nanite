@@ -181,6 +181,11 @@ class Planetside2(discord.ext.commands.Bot):
                 )
                 # Calculate KDR
                 player_kdr = round(player_total_kills / int(player_total_deaths), 2)
+                # Obtain player's total score
+                player_score = await player.stat_history(stat_name="score")
+                player_total_score = player_score[0]["all_time"]
+                # Calculate SCM
+                player_scm = round(int(player_total_score) / int(player.times.minutes_played), 2)
             except Exception as err:
                 logger.error(
                     f"Failed to get player information for: {player_name}.\n{err}"
@@ -194,7 +199,7 @@ class Planetside2(discord.ext.commands.Bot):
         # Build embed message containing player information
         player_info = f"""**General Information**
 ---------------------
-**World**: {player_world}
+**Server**: {player_world}
 **Faction**: {player_faction}
 **Outfit**: {player_outfit}
 **Battle Rank**: {player.data.battle_rank.value}
@@ -204,7 +209,9 @@ class Planetside2(discord.ext.commands.Bot):
 -------------------------
 **Total Kills**: {player_total_kills}
 **Total Deaths**: {player_total_deaths}
+**Total Score**: {player_total_score}
 **KDR**: {player_kdr}
+**SPM**: {player_scm}
 
 **Misc Information**
 ------------------
