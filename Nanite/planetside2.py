@@ -248,7 +248,7 @@ class Planetside2(discord.ext.commands.Bot):
         """
         # Create embed
         embed = await self._create_embed(
-            title=f"{player.data.name.first}'s Information",
+            title=player.data.name.first,
             description=player_info,
             colour=self.COLOUR,
             thumbnail_url=faction_image_url,
